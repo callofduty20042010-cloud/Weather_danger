@@ -1,0 +1,25 @@
+{% extends 'base_layout.html' %}
+{% block content %}
+<style>.create-card{max-width:900px;margin:0 auto;background:var(--panel);border:1px solid var(--stroke);border-radius:28px;padding:26px;box-shadow:0 18px 50px rgba(0,0,0,.28)} .create-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.create-grid p{margin:0}.create-grid p:nth-child(2){grid-column:1/-1} label{color:#fff;font-weight:800} @media(max-width:800px){.create-grid{grid-template-columns:1fr}}</style>
+<div class="create-card">
+    <h1 class="title">Создать событие</h1>
+    <p style="color:var(--muted);">Добавь координаты, уровень опасности и достоверность, чтобы событие сразу стало видимым на карте.</p>
+    <form method="post" class="mt-5">
+        {% csrf_token %}
+        <div class="create-grid">{{ form.as_p }}</div>
+        <button type="button" class="button mt-4" id="geoBtn">Вставить мои координаты</button>
+        <button type="submit" class="button is-info mt-4">Создать</button>
+    </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('geoBtn').addEventListener('click', () => {
+    if (!navigator.geolocation) return alert('Геолокация не поддерживается');
+    navigator.geolocation.getCurrentPosition(pos => {
+        document.getElementById('id_latitude').value = pos.coords.latitude.toFixed(6);
+        document.getElementById('id_longitude').value = pos.coords.longitude.toFixed(6);
+    }, () => alert('Не удалось получить координаты'));
+});
+</script>
+{% endblock %}

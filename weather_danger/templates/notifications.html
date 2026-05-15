@@ -1,0 +1,67 @@
+{% extends 'base_layout.html' %}
+
+{% block content %}
+<style>
+    .notifications-page {
+        background: var(--panel);
+        border: 1px solid var(--stroke);
+        border-radius: 28px;
+        padding: 26px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, .28);
+    }
+
+    .notification-card {
+        background: rgba(255, 255, 255, .06);
+        border: 1px solid rgba(255, 255, 255, .1);
+        border-left: 5px solid var(--danger);
+        border-radius: 20px;
+        padding: 18px;
+        margin-top: 14px;
+    }
+
+    .notification-card h3 {
+        color: #fff;
+        font-weight: 900;
+        font-size: 20px;
+        margin-bottom: 8px;
+    }
+
+    .notification-card p {
+        color: var(--muted);
+        margin-bottom: 8px;
+    }
+
+    .notification-meta {
+        font-size: 14px;
+        color: var(--muted);
+    }
+</style>
+
+<section class="notifications-page">
+    <h1 class="title">Уведомления</h1>
+    <p style="color: var(--muted);">
+        Здесь хранятся предупреждения о катаклизмах рядом с вашей сохранённой геолокацией.
+    </p>
+
+    {% for notification in notifications %}
+        <article class="notification-card">
+            <h3>{{ notification.title }}</h3>
+            <p>{{ notification.message }}</p>
+
+            <div class="notification-meta">
+                Расстояние: {{ notification.distance_km }} км •
+                Дата: {{ notification.created_at|date:"d.m.Y H:i" }}
+            </div>
+
+            <a class="button is-small is-danger mt-3" href="{% url 'event_detail' notification.event.id %}">
+                Открыть событие
+            </a>
+        </article>
+    {% empty %}
+        <div class="notification-card">
+            <h3>Пока опасностей рядом нет</h3>
+            <p>Если в радиусе 400 км появится активный катаклизм, сайт создаст уведомление автоматически.</p>
+        </div>
+    {% endfor %}
+</section>
+{% endblock %}

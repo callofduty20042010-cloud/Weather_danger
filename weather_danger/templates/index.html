@@ -1,0 +1,247 @@
+{% extends 'base_layout.html' %}
+{% block content %}
+<style>
+.hero-panel,
+.stat-card,
+.event-card,
+.filter-panel {
+    background: var(--panel);
+    border: 1px solid var(--stroke);
+    border-radius: 26px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .28);
+}
+
+.hero-dashboard {
+    display: grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap: 22px;
+    align-items: stretch;
+    margin-bottom: 24px;
+}
+
+.hero-panel {
+    padding: 30px;
+    background: linear-gradient(
+        135deg,
+        rgba(36, 15, 78, .96),
+        rgba(12, 7, 31, .96)
+    );
+}
+
+.hero-panel h1 {
+    margin-bottom: 12px;
+    color: #fff;
+    font-size: 46px;
+    line-height: 1;
+}
+
+.hero-panel p {
+    max-width: 780px;
+    color: var(--muted);
+    font-size: 18px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.stat-card {
+    padding: 20px;
+}
+
+.stat-card strong {
+    display: block;
+    color: #fff;
+    font-size: 34px;
+}
+
+.stat-card span {
+    color: var(--muted);
+}
+
+.filter-panel {
+    padding: 18px;
+    margin-bottom: 24px;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.events-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.event-card {
+    overflow: hidden;
+    transition: .25s ease;
+}
+
+.event-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(157, 123, 255, .5);
+}
+
+.event-top {
+    min-height: 180px;
+    padding: 18px;
+    background:
+        radial-gradient(
+            circle at 20% 0,
+            rgba(157, 123, 255, .22),
+            transparent 40%
+        ),
+        linear-gradient(
+            135deg,
+            rgba(255, 255, 255, .04),
+            rgba(255, 255, 255, .01)
+        );
+}
+
+.event-icon {
+    display: grid;
+    place-items: center;
+    width: 54px;
+    height: 54px;
+    margin-bottom: 14px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .08);
+    font-size: 26px;
+}
+
+.event-title {
+    margin-bottom: 8px;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.event-desc {
+    min-height: 54px;
+    color: var(--muted);
+}
+
+.event-body {
+    padding: 18px;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.chip {
+    padding: 7px 10px;
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .06);
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.danger-line {
+    height: 8px;
+    margin: 12px 0;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .08);
+}
+
+.danger-fill {
+    height: 100%;
+}
+
+.event-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+@media (max-width: 1100px) {
+    .hero-dashboard,
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .events-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .events-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-panel h1 {
+        font-size: 34px;
+    }
+}
+</style>
+
+<section class="hero-dashboard">
+    <div class="hero-panel">
+        <div class="chip">🛰️ live hazard intelligence</div>
+        <h1>Карта рисков, отчёты очевидцев и быстрые действия</h1>
+        <p>Фильтруй катаклизмы, открывай карту, отмечай безопасность, добавляй комментарии с фото и геометкой. Сайт теперь работает как маленький штаб наблюдения, а не просто лента карточек.</p>
+        <div class="buttons mt-5">
+            <a class="button is-info" href="{% url 'events_map' %}">Открыть карту</a>
+            <a class="button is-warning" href="{% url 'safety_guide' %}">Инструкция как вести себя</a>
+            <a class="button" href="{% url 'create_event' %}">Добавить событие</a>
+        </div>
+    </div>
+    <div class="stats-grid">
+        <div class="stat-card"><strong>{{ stats.total }}</strong><span>всего событий</span></div>
+        <div class="stat-card"><strong>{{ stats.active }}</strong><span>активных</span></div>
+        <div class="stat-card"><strong>{{ stats.critical }}</strong><span>критических</span></div>
+        <div class="stat-card"><strong>{{ stats.comments }}</strong><span>комментариев</span></div>
+    </div>
+</section>
+
+<form class="filter-panel" method="get">
+    <div class="filter-grid">
+        <div class="field"><label class="label">Поиск</label><input class="input" name="search" value="{{ request.GET.search }}" placeholder="Город, название, координаты, описание"></div>
+        <div class="field"><label class="label">Тип</label><div class="select is-fullwidth"><select name="type"><option value="">Все</option>{% for value,label in event_types %}<option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div></div>
+        <div class="field"><label class="label">Опасность</label><div class="select is-fullwidth"><select name="danger"><option value="">Все</option>{% for value,label in danger_levels %}<option value="{{ value }}" {% if request.GET.danger == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div></div>
+        <div class="field"><label class="label">Статус</label><div class="select is-fullwidth"><select name="status"><option value="">Все</option>{% for value,label in statuses %}<option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div></div>
+        <button class="button is-info" type="submit">Фильтр</button>
+    </div>
+</form>
+
+<div class="events-grid">
+{% for event in events %}
+    <article class="event-card">
+        <div class="event-top">
+            <div class="event-icon">{% if event.event_type == 'flood' %}🌊{% elif event.event_type == 'fire' %}🔥{% elif event.event_type == 'earthquake' %}🌎{% elif event.event_type == 'hurricane' %}🌀{% elif event.event_type == 'thunderstorm' %}⛈️{% elif event.event_type == 'dust_storm' %}🌪️{% else %}⚠️{% endif %}</div>
+            <div class="event-title">{{ event.title }}</div>
+            <div class="event-desc">{{ event.short_description }}</div>
+        </div>
+        <div class="event-body">
+            <div class="chips">
+                <span class="chip">{{ event.get_event_type_display }}</span>
+                <span class="chip">{{ event.get_status_display }}</span>
+                <span class="chip">Достоверность {{ event.credibility_score }}%</span>
+                <span class="chip">💬 {{ event.comments_count }}</span>
+            </div>
+            <div class="danger-line"><div class="danger-fill" style="width:{% if event.danger_level == 'low' %}25{% elif event.danger_level == 'medium' %}50{% elif event.danger_level == 'high' %}75{% else %}100{% endif %}%; background:{{ event.danger_color }};"></div></div>
+            <p style="color:var(--muted);">📍 {{ event.region|default:'Не указан' }}{% if event.latitude and event.longitude %} • {{ event.latitude }}, {{ event.longitude }}{% endif %}</p>
+            <div class="event-actions mt-4">
+                <a href="{% url 'event_detail' event.id %}" class="button is-link">Детали</a>
+                <a href="{% url 'events_map' %}?focus={{ event.id }}" class="button">На карте</a>
+            </div>
+        </div>
+    </article>
+{% empty %}
+    <div class="hero-panel" style="grid-column:1/-1;"><h2 class="title">Ничего не найдено</h2><p>Поменяй фильтры или добавь первое событие.</p></div>
+{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,578 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru" data-lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Danger</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <style>
+        :root {
+            --bg: #080511;
+            --panel: rgba(22, 13, 42, .92);
+            --panel-2: rgba(36, 15, 78, .86);
+            --stroke: rgba(157, 78, 221, .24);
+            --text: #f7f1ff;
+            --muted: #bcaee4;
+            --accent: #9d7bff;
+            --danger: #ff3b5c;
+            --safe: #27d17f;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            min-height: 100%;
+            background: radial-gradient(circle at top left, #241052 0, #080511 42%, #05030b 100%);
+            color: var(--text);
+        }
+
+        body.light-mode {
+            --bg: #f6f3ff;
+            --panel: rgba(255, 255, 255, .92);
+            --panel-2: rgba(246, 242, 255, .92);
+            --stroke: rgba(90, 56, 180, .18);
+            --text: #1c1230;
+            --muted: #685c82;
+
+            background: #f6f3ff;
+            color: var(--text);
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .app-shell {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .glass-nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(8, 5, 17, .78);
+            backdrop-filter: blur(18px);
+            border-bottom: 1px solid var(--stroke);
+        }
+
+        .navbar {
+            background: transparent !important;
+        }
+
+        .navbar-item,
+        .navbar-link {
+            color: var(--text) !important;
+        }
+
+        .navbar-item:hover {
+            background: rgba(157, 123, 255, .1) !important;
+            border-radius: 14px;
+        }
+
+        .brand-mark {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 900;
+            letter-spacing: .4px;
+        }
+
+        .brand-orb {
+            width: 38px;
+            height: 38px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, #7c4dff, #ff3b8a);
+            box-shadow: 0 0 24px rgba(157, 123, 255, .35);
+        }
+
+        .nav-pill {
+            border: 1px solid var(--stroke);
+            border-radius: 999px;
+            padding: 9px 14px;
+            color: var(--muted);
+            background: rgba(255, 255, 255, .04);
+        }
+
+        .nav-search {
+            min-width: 280px;
+        }
+
+        .app-main {
+            width: 100%;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 32px 20px 50px;
+            flex: 1;
+        }
+
+        .messages {
+            max-width: 900px;
+            margin: 16px auto;
+        }
+
+        .message-chip {
+            padding: 12px 16px;
+            border-radius: 16px;
+            margin-bottom: 10px;
+            border: 1px solid var(--stroke);
+            background: var(--panel);
+            color: var(--text);
+        }
+
+        .custom-footer {
+            background: rgba(8, 5, 17, .94) !important;
+            color: var(--muted) !important;
+            border-top: 1px solid var(--stroke);
+            padding: 34px 20px !important;
+        }
+
+        .footer-title {
+            color: var(--text);
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .button,
+        .input,
+        .select select,
+        .textarea {
+            border-radius: 14px !important;
+        }
+
+        .input,
+        .select select,
+        .textarea {
+            background: rgba(255, 255, 255, .06) !important;
+            border: 1px solid var(--stroke) !important;
+            color: var(--text) !important;
+        }
+
+        .input::placeholder,
+        .textarea::placeholder {
+            color: #9d91bd;
+        }
+
+        .button.is-info,
+        .button.is-link {
+            background: linear-gradient(135deg, #7c4dff, #9d7bff) !important;
+            border: 0 !important;
+            color: #fff !important;
+            font-weight: 700;
+        }
+
+        .button.is-danger {
+            background: linear-gradient(135deg, #ff3b5c, #c31432) !important;
+            border: 0 !important;
+        }
+
+        .button.is-success {
+            background: linear-gradient(135deg, #18b978, #27d17f) !important;
+            border: 0 !important;
+        }
+
+        .button.is-warning {
+            background: linear-gradient(135deg, #ffd166, #ff9f1c) !important;
+            border: 0 !important;
+            color: #201304 !important;
+        }
+
+        .lang-toggle {
+            display: flex;
+            gap: 6px;
+            padding: 4px;
+            border: 1px solid var(--stroke);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .04);
+        }
+
+        .lang-toggle button {
+            border: 0;
+            background: transparent;
+            color: var(--muted);
+            padding: 7px 10px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 800;
+        }
+
+        .lang-toggle button.active {
+            background: rgba(157, 123, 255, .22);
+            color: #fff;
+        }
+
+        [data-i18n-en]::after {
+            content: attr(data-i18n-ru);
+        }
+
+        html[data-lang="en"] [data-i18n-en]::after {
+            content: attr(data-i18n-en);
+        }
+
+        #scrollTopBtn {
+            position: fixed;
+            right: 22px;
+            bottom: 22px;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            display: none;
+            border: 1px solid var(--stroke);
+            background: linear-gradient(135deg, #7c4dff, #9d7bff);
+            color: white;
+            z-index: 999;
+            cursor: pointer;
+        }
+                .avatar-small {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255, 255, 255, .25);
+        }
+
+        .profile-pill {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .sidebar-toggle {
+            border: 1px solid var(--stroke);
+            background: rgba(255, 255, 255, .06);
+            color: var(--text);
+            border-radius: 14px;
+            padding: 9px 12px;
+            cursor: pointer;
+            font-weight: 900;
+        }
+
+        .sidebar-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .5);
+            z-index: 1200;
+            opacity: 0;
+            pointer-events: none;
+            transition: .2s ease;
+        }
+
+        .sidebar-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .app-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 310px;
+            height: 100vh;
+            background: rgba(12, 7, 26, .98);
+            border-right: 1px solid var(--stroke);
+            z-index: 1300;
+            transform: translateX(-105%);
+            transition: .25s ease;
+            padding: 22px;
+            box-shadow: 20px 0 50px rgba(0, 0, 0, .35);
+        }
+
+        .app-sidebar.active {
+            transform: translateX(0);
+        }
+
+        .sidebar-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 22px;
+        }
+
+        .sidebar-title {
+            color: #fff;
+            font-weight: 900;
+            font-size: 20px;
+        }
+
+        .sidebar-close {
+            border: 0;
+            background: rgba(255, 255, 255, .08);
+            color: #fff;
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 13px 14px;
+            border-radius: 16px;
+            color: var(--text);
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid transparent;
+        }
+
+        .sidebar-link:hover {
+            background: rgba(157, 123, 255, .14);
+            border-color: var(--stroke);
+            color: #fff;
+        }
+
+        .badge-danger {
+            min-width: 22px;
+            height: 22px;
+            padding: 0 7px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: var(--danger);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 900;
+            box-shadow: 0 0 18px rgba(255, 59, 92, .45);
+        }
+
+        .danger-toast {
+            position: fixed;
+            top: 92px;
+            right: 22px;
+            width: min(420px, calc(100vw - 32px));
+            z-index: 1400;
+            background: rgba(40, 12, 24, .96);
+            border: 1px solid rgba(255, 59, 92, .55);
+            border-left: 6px solid var(--danger);
+            border-radius: 20px;
+            padding: 16px 18px;
+            color: #fff;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, .45);
+            animation: toastIn .25s ease;
+        }
+
+        .danger-toast strong {
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .danger-toast p {
+            color: #ffd6de;
+            margin-bottom: 10px;
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateY(-12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .nav-search {
+                min-width: 160px;
+            }
+
+            .navbar-menu {
+                background: rgba(8, 5, 17, .96) !important;
+                padding: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    {% if user.is_authenticated %}
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+        <aside class="app-sidebar" id="appSidebar">
+            <div class="sidebar-head">
+                <div class="sidebar-title">Меню</div>
+                <button class="sidebar-close" type="button" id="closeSidebar">×</button>
+            </div>
+
+            <a class="sidebar-link" href="{% url 'index' %}">
+                <span>Все события</span>
+            </a>
+
+            <a class="sidebar-link" href="{% url 'events_map' %}">
+                <span>Карта</span>
+            </a>
+
+            <a class="sidebar-link" href="{% url 'notifications' %}">
+                <span>Уведомления</span>
+                {% if unread_notifications_count %}
+                    <span class="badge-danger">{{ unread_notifications_count }}</span>
+                {% endif %}
+            </a>
+
+            <a class="sidebar-link" href="{% url 'safety_guide' %}">
+                <span>Инструкции безопасности</span>
+            </a>
+
+            <a class="sidebar-link" href="{% url 'statistics' %}">
+                <span>Статистика</span>
+            </a>
+
+            <a class="sidebar-link" href="{% url 'create_event' %}">
+                <span>Добавить событие</span>
+            </a>
+
+            <a class="sidebar-link" href="{% url 'profile' %}">
+                <span>Профиль</span>
+            </a>
+        </aside>
+        {% endif %}
+    <header class="glass-nav">
+        <nav class="navbar" role="navigation" aria-label="main navigation">
+            <div class="navbar-brand">
+                <a class="navbar-item" href="{% url 'index' %}">
+                    <span class="brand-mark"><span class="brand-orb">⚡</span> Weather Danger</span>
+                </a>
+                {% if user.is_authenticated %}
+                <div class="navbar-item">
+                    <button class="sidebar-toggle" type="button" id="openSidebar">☰</button>
+                </div>
+                {% endif %} 
+            </div>
+            <div id="mainNav" class="navbar-menu">
+                {% if user.is_authenticated %}
+                <div class="navbar-end is-align-items-center" style="gap:10px; padding-right:12px;">
+                    <form method="get" action="{% url 'index' %}" class="navbar-item">
+                        <div class="field has-addons">
+                            <div class="control"><input class="input nav-search" type="search" name="search" placeholder="Город, название, описание" value="{{ request.GET.search }}"></div>
+                            <div class="control"><button class="button is-info" type="submit">Поиск</button></div>
+                        </div>
+                    </form>
+                    <div class="navbar-item"><div class="lang-toggle"><button type="button" data-lang-btn="ru">RU</button><button type="button" data-lang-btn="en">EN</button></div></div>
+                    <button class="button navbar-item" type="button" onclick="toggleTheme()">Тема</button>
+                    <a class="navbar-item nav-pill profile-pill" href="{% url 'profile' %}">
+                        {% if user.profile.avatar %}
+                            <img class="avatar-small" src="{{ user.profile.avatar.url }}" alt="avatar">
+                        {% else %}
+                            <span class="avatar-small" style="display:grid;place-items:center;background:rgba(255,255,255,.12);">👤</span>
+                        {% endif %}
+                        <span>{{ user.username }}</span>
+                    </a>
+
+                    <a class="navbar-item nav-pill" href="{% url 'notifications' %}">
+                        Уведомления
+                        {% if unread_notifications_count %}
+                            <span class="badge-danger">{{ unread_notifications_count }}</span>
+                        {% endif %}
+                    </a>
+
+                    <a class="navbar-item button is-danger" href="{% url 'users:sign_out' %}">Выход</a>
+                </div>
+                {% else %}
+                <div class="navbar-end" style="gap:10px; padding:10px;">
+                    <a class="button is-info" href="{% url 'users:sign_in' %}">Войти</a>
+                    <a class="button" href="{% url 'users:sign_up' %}">Регистрация</a>
+                </div>
+                {% endif %}
+            </div>
+        </nav>
+    </header>
+
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}<div class="message-chip">{{ message }}</div>{% endfor %}
+    </div>
+        {% endif %}
+        {% if popup_danger_notifications %}
+        {% for danger_notification in popup_danger_notifications %}
+            <div class="danger-toast">
+                <strong>{{ danger_notification.title }}</strong>
+                <p>{{ danger_notification.message }}</p>
+                <a class="button is-small is-danger" href="{% url 'event_detail' danger_notification.event.id %}">
+                    Посмотреть
+                </a>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <main class="app-main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer custom-footer">
+        <div class="columns is-multiline">
+            <div class="column is-4"><div class="footer-title">Weather Danger</div><p>Система мониторинга природных катаклизмов, погодных рисков и локальных сигналов безопасности.</p></div>
+            <div class="column is-4"><div class="footer-title">Экстренные службы</div><p>101 пожарная • 102 полиция • 103 скорая • 104 газ • 112 спасение</p></div>
+            <div class="column is-4"><div class="footer-title">Режим</div><p>24/7 мониторинг, карта рисков, комментарии очевидцев, Safety Guide.</p></div>
+        </div>
+        <hr style="background:rgba(255,255,255,.1);">
+        <p class="has-text-centered">© 2026 Weather Danger</p>
+    </footer>
+</div>
+<button id="scrollTopBtn">↑</button>
+<script>
+    function applyLang(lang) {
+        document.documentElement.dataset.lang = lang;
+        localStorage.setItem('wd_lang', lang);
+        document.querySelectorAll('[data-lang-btn]').forEach(btn => btn.classList.toggle('active', btn.dataset.langBtn === lang));
+    }
+    function toggleTheme() {
+        document.body.classList.toggle('light-mode');
+        localStorage.setItem('wd_theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+        const burger = document.querySelector('.navbar-burger');
+        const menu = document.getElementById('mainNav');
+        if (burger && menu) burger.addEventListener('click', () => { burger.classList.toggle('is-active'); menu.classList.toggle('is-active'); });
+        if (localStorage.getItem('wd_theme') === 'light') document.body.classList.add('light-mode');
+        applyLang(localStorage.getItem('wd_lang') || 'ru');
+        document.querySelectorAll('[data-lang-btn]').forEach(btn => btn.addEventListener('click', () => applyLang(btn.dataset.langBtn)));
+        const topBtn = document.getElementById('scrollTopBtn');
+        window.addEventListener('scroll', () => { topBtn.style.display = window.scrollY > 300 ? 'block' : 'none'; });
+        topBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+        
+        const openSidebar = document.getElementById('openSidebar');
+        const closeSidebar = document.getElementById('closeSidebar');
+        const sidebar = document.getElementById('appSidebar');
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+        function showSidebar() {
+            if (!sidebar || !sidebarBackdrop) return;
+            sidebar.classList.add('active');
+            sidebarBackdrop.classList.add('active');
+        }
+
+        function hideSidebar() {
+            if (!sidebar || !sidebarBackdrop) return;
+            sidebar.classList.remove('active');
+            sidebarBackdrop.classList.remove('active');
+        }
+
+        if (openSidebar) openSidebar.addEventListener('click', showSidebar);
+        if (closeSidebar) closeSidebar.addEventListener('click', hideSidebar);
+        if (sidebarBackdrop) sidebarBackdrop.addEventListener('click', hideSidebar);
+
+        setTimeout(() => {
+            document.querySelectorAll('.danger-toast').forEach(toast => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-12px)';
+                setTimeout(() => toast.remove(), 250);
+            });
+        }, 10000);
+    });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

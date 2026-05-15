@@ -1,0 +1,162 @@
+{% extends 'base_layout.html' %}
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<style>
+.map-page { display:grid; grid-template-columns: 340px 1fr; gap:18px; }
+.map-panel, .map-card, .overview-card { background:var(--panel); border:1px solid var(--stroke); border-radius:26px; box-shadow:0 18px 50px rgba(0,0,0,.28); }
+.map-panel { padding:20px; height:fit-content; position:sticky; top:96px; }
+.map-title { font-size:34px; font-weight:900; color:#fff; line-height:1; margin-bottom:8px; }
+.map-muted { color:var(--muted); }
+.quick-overview { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
+.overview-card { padding:14px; }
+.overview-card strong { display:block; font-size:26px; color:#fff; }
+.filter-block { margin-top:18px; }
+.filter-block label { color:#fff; font-weight:800; margin:12px 0 6px; display:block; }
+.checkbox-row { display:flex; align-items:center; gap:8px; color:var(--muted); margin:7px 0; }
+.map-card { padding:12px; position:relative; }
+#events-map { height: 760px; width:100%; border-radius:20px; overflow:hidden; background:#120a22; }
+.wd-marker { position:relative; width:46px !important; height:46px !important; margin-left:-23px !important; margin-top:-23px !important; border-radius:18px; display:flex; align-items:center; justify-content:center; color:white; font-size:22px; font-weight:900; border:3px solid rgba(255,255,255,.92); box-shadow:0 0 0 7px rgba(255,255,255,.12), 0 10px 30px rgba(0,0,0,.45); z-index:9999 !important; transform:translateZ(0); }
+.wd-marker::after { content:""; position:absolute; inset:-10px; border-radius:24px; border:2px solid currentColor; opacity:.35; animation:pulse 1.8s infinite; }
+@keyframes pulse { 0%{transform:scale(.7); opacity:.5} 100%{transform:scale(1.3); opacity:0} }
+.event-tooltip-wrapper { background:transparent !important; border:none !important; box-shadow:none !important; padding:0 !important; }
+.event-tooltip-wrapper::before { display:none !important; }
+.event-mini-tooltip { min-width:190px; max-width:260px; padding:10px 12px; border-radius:16px; background:rgba(10,6,24,.96); border:1px solid rgba(255,255,255,.2); box-shadow:0 14px 30px rgba(0,0,0,.45); color:#f6efff; backdrop-filter:blur(10px); }
+.event-mini-tooltip strong { display:block; font-size:14px; color:#fff; margin-bottom:4px; }
+.event-mini-tooltip span { display:block; font-size:12px; color:#d9cdf5; }
+.popup-card { min-width:240px; color:#1a102a; }
+.popup-card h3 { margin:0 0 6px; font-size:18px; }
+.popup-chip { display:inline-block; padding:4px 8px; border-radius:999px; background:#f1ebff; margin:3px; font-size:12px; }
+.nearest-box { padding:14px; border-radius:18px; background:rgba(255,255,255,.05); border:1px solid var(--stroke); margin-top:14px; color:var(--muted); }
+.search-results { max-height:180px; overflow:auto; margin-top:8px; }
+.result-item { width:100%; text-align:left; border:1px solid var(--stroke); background:rgba(255,255,255,.04); color:var(--text); padding:9px; border-radius:12px; margin-bottom:6px; cursor:pointer; }
+.leaflet-marker-icon, .leaflet-tooltip { z-index: 9999 !important; }
+.marker-cluster-small, .marker-cluster-medium, .marker-cluster-large { background:rgba(124,77,255,.25) !important; }
+.marker-cluster div { background:linear-gradient(135deg,#7c4dff,#ff3b5c) !important; color:#fff !important; font-weight:900 !important; }
+@media(max-width:1100px){ .map-page{grid-template-columns:1fr;} .map-panel{position:static;} .quick-overview{grid-template-columns:1fr 1fr;} #events-map{height:620px;} }
+</style>
+
+<div class="quick-overview">
+    <div class="overview-card"><strong>{{ stats.total }}</strong><span class="map-muted">на карте</span></div>
+    <div class="overview-card"><strong>{{ stats.active }}</strong><span class="map-muted">Active</span></div>
+    <div class="overview-card"><strong>{{ stats.high }}</strong><span class="map-muted">High</span></div>
+    <div class="overview-card"><strong>{{ stats.critical }}</strong><span class="map-muted">Critical</span></div>
+</div>
+
+<section class="map-page">
+    <aside class="map-panel">
+        <div class="map-title">Hazard Map</div>
+        <p class="map-muted">Маркеры увеличены, закреплены поверх карты, сгруппированы в кластеры и показывают краткую информацию на любом масштабе.</p>
+
+        <div class="nearest-box" id="nearestBox">📍 Нажми “Найти ближайший”, чтобы получить умное предупреждение рядом.</div>
+        <div class="buttons mt-3">
+            <button class="button is-info is-fullwidth" type="button" id="locateBtn">Найти ближайший</button>
+            <button class="button is-warning is-fullwidth" type="button" id="showAllBtn">Показать все</button>
+        </div>
+
+        <div class="filter-block">
+            <label>Поиск по городу / координатам</label>
+            <input class="input" id="mapSearch" placeholder="Tashkent или 41.31, 69.27">
+            <div class="search-results" id="searchResults"></div>
+        </div>
+
+        <div class="filter-block">
+            <label>Тип катаклизма</label>
+            {% for value,label in event_types %}<label class="checkbox-row"><input type="checkbox" class="type-filter" value="{{ value }}" checked> {{ label }}</label>{% endfor %}
+        </div>
+        <div class="filter-block">
+            <label>Уровень опасности</label>
+            {% for value,label in danger_levels %}<label class="checkbox-row"><input type="checkbox" class="danger-filter" value="{{ value }}" checked> {{ label }}</label>{% endfor %}
+        </div>
+        <div class="filter-block">
+            <label>Статус</label>
+            {% for value,label in statuses %}<label class="checkbox-row"><input type="checkbox" class="status-filter" value="{{ value }}" checked> {{ label }}</label>{% endfor %}
+        </div>
+    </aside>
+    <div class="map-card">
+        <div id="events-map"></div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const events = {{ events_json|safe }};
+const focusId = new URLSearchParams(window.location.search).get('focus');
+const typeIcons = { earthquake:'🌎', flood:'🌊', fire:'🔥', hurricane:'🌀', heavy_rain:'🌧️', extreme_temp:'🌡️', thunderstorm:'⛈️', landslide:'⛰️', dust_storm:'🌪️', volcano:'🌋', other:'⚠️' };
+const dangerRank = { low:1, medium:2, high:3, critical:4 };
+const map = L.map('events-map', { zoomControl: true, preferCanvas: false }).setView([41.3111, 69.2797], 3);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+const cluster = L.markerClusterGroup({ showCoverageOnHover:false, maxClusterRadius: 42, spiderfyOnMaxZoom:true, disableClusteringAtZoom: 15 });
+const circles = L.layerGroup().addTo(map);
+const markerById = new Map();
+let allMarkers = [];
+function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch])); }
+function iconFor(event) {
+    const icon = typeIcons[event.event_type] || '⚠️';
+    return L.divIcon({ className:'', html:`<div class="wd-marker" style="background:${event.danger_color}; color:${event.danger_color};"><span style="color:white">${icon}</span></div>`, iconSize:[46,46], iconAnchor:[23,23], popupAnchor:[0,-24], tooltipAnchor:[0,-32] });
+}
+function tooltipFor(e) {
+    return `<div class="event-mini-tooltip"><strong>${escapeHtml(e.title)}</strong><span>${escapeHtml(e.danger_label)} • ${escapeHtml(e.status_label)}</span><span>📍 ${escapeHtml(e.region)} • ${e.credibility_score}%</span></div>`;
+}
+function popupFor(e) {
+    return `<div class="popup-card"><h3>${escapeHtml(e.title)}</h3><p>${escapeHtml(e.description)}</p><div><span class="popup-chip">${escapeHtml(e.event_type_label)}</span><span class="popup-chip">${escapeHtml(e.danger_label)}</span><span class="popup-chip">${escapeHtml(e.status_label)}</span><span class="popup-chip">${e.credibility_score}% trust</span></div><p style="margin-top:8px;">Радиус: ${e.radius_km} км<br>Комментарии: ${e.comments_count}</p><a href="${e.url}" class="button is-link is-small is-fullwidth">Открыть событие</a></div>`;
+}
+function selectedValues(selector) { return new Set([...document.querySelectorAll(selector + ':checked')].map(i => i.value)); }
+function passesFilters(e) { return selectedValues('.type-filter').has(e.event_type) && selectedValues('.danger-filter').has(e.danger_level) && selectedValues('.status-filter').has(e.status); }
+function renderMarkers() {
+    cluster.clearLayers(); circles.clearLayers(); allMarkers = [];
+    events.filter(passesFilters).forEach(e => {
+        const marker = L.marker([e.latitude, e.longitude], { icon: iconFor(e), riseOnHover:true, zIndexOffset: dangerRank[e.danger_level] * 1000 });
+        marker.bindTooltip(tooltipFor(e), { permanent:true, direction:'top', offset:[0,-24], opacity:1, className:'event-tooltip-wrapper' });
+        marker.bindPopup(popupFor(e));
+        marker.eventData = e;
+        cluster.addLayer(marker); allMarkers.push(marker); markerById.set(String(e.id), marker);
+        L.circle([e.latitude, e.longitude], { radius:e.radius_km*1000, color:e.danger_color, weight:1, fillColor:e.danger_color, fillOpacity:.08 }).addTo(circles);
+    });
+    map.addLayer(cluster);
+    if (allMarkers.length) map.fitBounds(L.featureGroup(allMarkers).getBounds().pad(.2));
+}
+function distanceKm(a,b,c,d){ const R=6371, toRad=x=>x*Math.PI/180; const dLat=toRad(c-a), dLon=toRad(d-b); const lat1=toRad(a), lat2=toRad(c); const x=Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2; return 2*R*Math.asin(Math.sqrt(x)); }
+function findNearest(lat, lon) {
+    const visible = events.filter(passesFilters);
+    if (!visible.length) return null;
+    return visible.map(e => ({...e, distance: distanceKm(lat, lon, e.latitude, e.longitude)})).sort((a,b)=>a.distance-b.distance)[0];
+}
+function smartWarning(nearest) {
+    if (!nearest) return 'Нет событий по выбранным фильтрам.';
+    const inside = nearest.distance <= nearest.radius_km;
+    const level = nearest.danger_level === 'critical' || nearest.danger_level === 'high' ? '🚨' : '⚠️';
+    return `${level} Ближайшее: <b>${escapeHtml(nearest.title)}</b><br>${nearest.distance.toFixed(1)} км от вас. Радиус риска: ${nearest.radius_km} км.<br>${inside ? '<b>Вы внутри зоны риска.</b> Откройте Safety Guide и отметьте статус.' : 'Вы вне радиуса, но следите за обновлениями.'}`;
+}
+function focusMarker(marker) { cluster.zoomToShowLayer(marker, () => { map.setView(marker.getLatLng(), Math.max(map.getZoom(), 12)); marker.openPopup(); }); }
+document.querySelectorAll('.type-filter,.danger-filter,.status-filter').forEach(el => el.addEventListener('change', renderMarkers));
+document.getElementById('showAllBtn').addEventListener('click', () => { document.querySelectorAll('input[type="checkbox"]').forEach(i => i.checked = true); renderMarkers(); });
+document.getElementById('locateBtn').addEventListener('click', () => {
+    const box = document.getElementById('nearestBox');
+    if (!navigator.geolocation) { box.innerHTML = 'Геолокация не поддерживается браузером.'; return; }
+    box.innerHTML = 'Определяю координаты...';
+    navigator.geolocation.getCurrentPosition(pos => {
+        const { latitude, longitude } = pos.coords;
+        L.marker([latitude, longitude], { title:'Вы здесь' }).addTo(map).bindPopup('Вы здесь').openPopup();
+        const nearest = findNearest(latitude, longitude);
+        box.innerHTML = smartWarning(nearest);
+        if (nearest) focusMarker(markerById.get(String(nearest.id)));
+    }, () => { box.innerHTML = 'Не удалось получить геолокацию. Можно искать по координатам вручную.'; });
+});
+const searchInput = document.getElementById('mapSearch');
+const results = document.getElementById('searchResults');
+searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase(); results.innerHTML='';
+    const coord = q.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+    if (coord) { const lat=parseFloat(coord[1]), lon=parseFloat(coord[2]); const nearest=findNearest(lat,lon); results.innerHTML = `<button class="result-item" type="button" id="coordResult">Координаты: ${lat}, ${lon}<br>${nearest ? 'Ближайшее: '+escapeHtml(nearest.title)+' — '+nearest.distance.toFixed(1)+' км' : ''}</button>`; document.getElementById('coordResult').onclick=()=>{ map.setView([lat,lon],12); if(nearest) focusMarker(markerById.get(String(nearest.id))); }; return; }
+    if (q.length < 2) return;
+    events.filter(e => `${e.title} ${e.region} ${e.description} ${e.event_type_label}`.toLowerCase().includes(q)).slice(0,8).forEach(e => { const btn=document.createElement('button'); btn.type='button'; btn.className='result-item'; btn.innerHTML=`<b>${escapeHtml(e.title)}</b><br>${escapeHtml(e.region)} • ${escapeHtml(e.danger_label)}`; btn.onclick=()=>focusMarker(markerById.get(String(e.id))); results.appendChild(btn); });
+});
+renderMarkers();
+if (focusId && markerById.has(focusId)) setTimeout(() => focusMarker(markerById.get(focusId)), 500);
+</script>
+{% endblock %}
